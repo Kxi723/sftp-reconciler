@@ -28,15 +28,15 @@ from pathlib import Path
 
 # Paths
 SCRIPT_DIR = Path(__file__).parent
-EXCEL_DIR = SCRIPT_DIR / "Excel"
-SFTP_DIR = SCRIPT_DIR / "SFTP"
-RESULT_DIR = SCRIPT_DIR / "Result"
+EXCEL_DIR = SCRIPT_DIR / "ShouldUpload"
+SFTP_DIR = SCRIPT_DIR / "ExistInSFTP"
+RESULT_DIR = SCRIPT_DIR / "MissUpload"
 ERROR_DIR = SCRIPT_DIR / "Error"
 LOG_DIR = SCRIPT_DIR / "Log"
 
 # Get current date & time
-date_time = datetime.datetime.now()
-CURRENT_DATE_TIME = date_time.strftime("%d%m%Y_%H%M%S")
+DATE_TIME = datetime.datetime.now()
+CURRENT_DATE_TIME = DATE_TIME.strftime("%d%m%Y_%H%M%S")
 
 # Logging
 logging.basicConfig(
@@ -87,6 +87,9 @@ def read_file_list(dir_path: Path):
             datestamp = datetime.datetime.fromtimestamp(timestamp)
 
             logging.debug(f"File readed: {file_path.name} | Last modified date: {datestamp}")
+
+            # print("Last Modified Date: ", datestamp.date())
+            # print("Today Date: ", DATE_TIME.date())
 
             # Remove '\n' in list()
             return ship_ref.read().splitlines()
@@ -163,16 +166,15 @@ class FileComparator:
         logging.info("Comparison started")
         
         # Convert to sets for efficient O(1) lookups
-        sftp_set = set(self.ship_ref_in_sftp)
         excel_set = set(self.file_listed_in_excel)
+        sftp_set = set(self.ship_ref_in_sftp)
 
         # Files haven't uploaded to SFTP
-        # Preserving original Excel list order and removing duplicates
         missing_files = [f for f in self.file_listed_in_excel if f not in sftp_set]
+        # Use dictionary to remove duplicates (key is unique), then convert back to list
         self.file_missing_in_sftp = list(dict.fromkeys(missing_files))
 
         # Files not listed in Excel
-        # Preserving original SFTP list order and removing duplicates
         extra_files = [f for f in self.ship_ref_in_sftp if f not in excel_set]
         self.extra_file_in_sftp = list(dict.fromkeys(extra_files))
 
