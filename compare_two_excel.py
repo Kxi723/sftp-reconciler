@@ -1,9 +1,13 @@
-import pandas as pd
-from datetime import date
-from typing import Optional
+from pathlib import Path
 import logging
-import os
 from dotenv import load_dotenv
+import os
+import pandas as pd
+from datetime import date, datetime
+from typing import Optional # can return as 'None'
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Logging
 logging.basicConfig(
@@ -13,12 +17,16 @@ logging.basicConfig(
     # filemode = 'w'
 )
 
-# Load variables from .env file
-load_dotenv()
-# ── CONFIGURATION ────────────────────────────────────────────────────────────
-NEW_FILE = os.getenv("NEW_FILE")
-OLD_FILE = os.getenv("OLD_FILE")
-# ─────────────────────────────────────────────────────────────────────────────
+
+# -------------------------------------------------
+# Configuration Constants
+# -------------------------------------------------
+
+NEW_FILE = os.getenv("THE_LATEST_CSV_FILE_PATH")
+OLD_FILE = os.getenv("THE_SECOND_LATEST_CSV_FILE_PATH")
+
+
+
 
 class NewShipmentFinder:
     """
@@ -26,12 +34,40 @@ class NewShipmentFinder:
     within a specific date window.
     """
 
-    def __init__(self, new_file: str, old_file: str, days_lookback: int = 31):
+    def __init__(self, new_file: str = NEW_FILE, old_file: str = OLD_FILE,
+                days_lookback: int = 31):
         self.new_file = new_file
         self.old_file = old_file
         self.days_lookback = days_lookback
         self.ship_ref_col = "Ship Ref"
         self.pod_col = "POD"
+
+
+    def read_folder(self, dir_path:Path):
+        if not dir_path.exists() or not dir_path.is_dir():
+            print("wrong")
+            return
+        csv_files = list(dir_path.glob("*.csv"))
+        if not csv_files:
+            print("No .csv file found")
+            return
+        time_list= []
+        correct_path = ''
+        for i in csv_files:
+            with open(i, 'r', encoding='utf-8') as f:
+                timestamp = os.path.getmtime(i)
+                datestamp = datetime.fromtimestamp(timestamp)
+                time_list.append(datestamp)
+                time_list.sort(reverse=True)
+                if time_list[0] == datestamp:
+                    correct_path = i
+        dataFrame = pd.read_csv(correct_path)
+        ShipRef_column = dataFrame.columns[9]
+        POD_column = dataFrame.columns[29]
+
+        ...
+
+
 
     # '->' is for type hinting, indicating the return type of the function
     def read_and_filter_csv(self, filepath: str) -> pd.DataFrame:
@@ -114,7 +150,7 @@ if __name__ == "__main__":
     logging.info("Program started")
 
     try:
-        finder = NewShipmentFinder(NEW_FILE, OLD_FILE)
+        finder = NewShipmentFinder()
         finder.find_new_records()
 
     except FileNotFoundError as e:
