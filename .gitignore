@@ -1,13 +1,9 @@
 __pycache__/
 
 Error/
-
 ExistInSFTP/
-
 MissUpload/
-
 EVisibility_Folder/
 
 .env
-
-program_log.log
+activity.log
