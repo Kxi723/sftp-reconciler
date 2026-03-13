@@ -32,7 +32,7 @@ ERROR_DIR.mkdir(parents=True, exist_ok=True)
 
 # Shared Logging Setup
 def setup_logging():
-    log_file_path = LOG_DIR / "program_log.log"
+    log_file_path = LOG_DIR / "activity.log"
     
     logging.basicConfig(
         filename=log_file_path,
