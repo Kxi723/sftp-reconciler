@@ -250,9 +250,11 @@ class NewShipmentFinder:
 
         print("─" * 33)
 
+# -------------------------------------------------
+# Main Entry Point
+# -------------------------------------------------
 
 if __name__ == "__main__":
-
     logging.info("csv_extractor.py program started")
 
     try:
@@ -269,4 +271,5 @@ if __name__ == "__main__":
     except Exception as e:
         logging.error(e)
  
-    logging.info("csv_extractor.py program ended")
+    finally:
+        logging.info("csv_extractor.py program ended")
