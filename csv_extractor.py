@@ -157,7 +157,7 @@ class NewShipmentFinder:
         # If old file is missing or empty, everything is considered "new added"
         if old_df.empty:
             added_df = new_df.copy()
-            logging.info("All data in past 30days are new added.")
+            logging.warning("All data in past 30days are new added.")
 
         # '~' means NOT, all data not in old_df means new data
         else:
