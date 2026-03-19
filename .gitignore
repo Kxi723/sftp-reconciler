@@ -1,9 +1,9 @@
 __pycache__/
 
-Error/
-ExistInSFTP/
-MissUpload/
-EVisibility_Folder/
+evisibility_folder/
+in_advance/
+missing/
+sftp/
 
 .env
 activity.log
