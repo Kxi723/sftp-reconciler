@@ -166,8 +166,8 @@ class NewShipmentFinder:
             ascending=[False, True]
         ).reset_index(drop=True)
 
-        self.write_result_in_txt(added_df)
         self.display_result_in_terminal(added_df)
+        self.write_result_in_txt(added_df)
 
 
     def write_result_in_txt(self, new_data: pd.DataFrame):
