@@ -190,8 +190,7 @@ class FileComparator:
 
     #     still_missing = [ref for ref in prev_missing if ref not in sftp_set]
 
-    #     # return still_missing
-    #     return prev_missing
+    #     return still_missing
 
 
     def display_result_in_terminal(self):
@@ -223,37 +222,44 @@ class FileComparator:
         5. Display missing files in the terminal and export both lists.
         """
 
+        # New data uploaded in SFTP
+        sftp_data = self.read_latest_txt(self.sftp_dir, True)
+        print("new SFTP upload: ", sftp_data)
+
+        # Data that uploaded in SFTP but not recorded in csv
+        pre_upload = self.read_last_record(self.surplus_dir, "surplus")
+        print("Pre-load: ", pre_upload)
+        sftp_combined = list(dict.fromkeys(list(pre_upload) + list(sftp_data)))
+        sftp_set = set(sftp_combined)
+        print("Total SFTP: ", sftp_combined, "\n")
+
+
         # New data updated in csv
         csv_data = self.read_latest_txt(self.csv_dir, False)
+        print("new csv upload: ", csv_data)
         # Last missing data, check again
         last_missing_sftp = self.read_last_record(self.result_dir, "result")
+        print("last miss: ", last_missing_sftp)
         # Use dictionary to remove duplicates (key is unique), then convert to list
         csv_combined = list(dict.fromkeys(list(csv_data) + list(last_missing_sftp)))
         # Separate set ONLY for O(1) lookup — doesn't need order
         csv_set = set(csv_combined)
-
-        # New data uploaded in SFTP
-        sftp_data = self.read_latest_txt(self.sftp_dir, True)
-
-        # Data that uploaded in SFTP but not recorded in csv
-        pre_upload = self.read_last_record(self.surplus_dir, "surplus")
-        sftp_combined = list(dict.fromkeys(list(pre_upload) + list(sftp_data)))
-        sftp_set = set(sftp_combined)
+        print("Total CSV: ", csv_combined, "\n")
 
         # Files haven't been upload to SFTP
-        # Use FULL SFTP snapshot to check, so carried-forward items that
-        # have since been uploaded (or are no longer relevant) are dropped
         file_missing = [f for f in csv_combined if f not in sftp_set]
         self.result_list = list(dict.fromkeys(file_missing))
+        print("Miss: ", self.result_list, "\n")
 
         # Files hasnt recorded in csv
         wait_update = [f for f in sftp_combined if f not in csv_set]
         self.insequence_list = list(dict.fromkeys(wait_update))
+        print("More: ", self.insequence_list, "\n")
 
         logging.info(f"{len(self.result_list)} files haven't upload to SFTP")
         logging.info(f"{len(self.insequence_list)} file hasn't updated in csv")
 
-        self.display_result_in_terminal()
+        # self.display_result_in_terminal()
 
         self.export_result(self.result_list, self.result_dir, "Results")
         self.export_result(self.insequence_list, self.surplus_dir, "Pre-uploads")
