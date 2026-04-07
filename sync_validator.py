@@ -94,16 +94,18 @@ class FileComparator:
         # For sftp, get new data upload
         else:
             logging.info(f"Second {file_type} file found: {files_sorted[1][0].name}")
-            
+
             try:
                 with open(files_sorted[0][0], 'r', encoding='utf-8') as data:
                     new_list = data.read().splitlines()
+                    new_list = self.filter_parent_path(new_list)
             except Exception as e:
                 raise SystemExit(f"Couldn't read {files_sorted[0][0].name} | {e}")
 
             try:
                 with open(files_sorted[1][0], 'r', encoding='utf-8') as data:
                     old_list = data.read().splitlines()
+                    old_list = self.filter_parent_path(old_list)
             except Exception as e:
                 raise SystemExit(f"Couldn't read {files_sorted[1][0].name} | {e}")
 
@@ -113,7 +115,7 @@ class FileComparator:
             return new_data
 
 
-    def filter_parent_path(self, sftp_path: Path) -> list:
+    def filter_parent_path(self, list: list) -> list:
         """
         Read latest data and clean each path into a bare Ship_Ref.
 
@@ -122,11 +124,10 @@ class FileComparator:
         (e.g. REF123_01012024120000.pdf → REF123).
         """
 
-        sftp_data = self.read_latest_txt(sftp_path, True)
         cleaned_data = []
 
         logging.debug("Cleaning sftp file path")
-        for ship_ref in sftp_data:
+        for ship_ref in list:
 
             # Remove directory path to get file name
             filename = Path(ship_ref).name
@@ -172,24 +173,25 @@ class FileComparator:
             return []
 
 
-    def carry_forward_missing(self, sftp_set: set) -> list:
-        """
-        Return Ship_Ref from the previous result file that are still 
-        absent from the current SFTP set.
+    # def carry_forward_missing(self, sftp_set: set) -> list:
+    #     """
+    #     Return Ship_Ref from the previous result file that are still 
+    #     absent from the current SFTP set.
 
-        If Ship_Ref have been uploaded, it will be dropped and will not 
-        appear in the new result file.
-        """
+    #     If Ship_Ref have been uploaded, it will be dropped and will not 
+    #     appear in the new result file.
+    #     """
 
-        prev_missing = self.read_last_record(self.result_dir, "result")
+    #     prev_missing = self.read_last_record(self.result_dir, "result")
 
-        if not prev_missing:
-            logging.debug("No previous result file found, nothing to carry forward")
-            return []
+    #     if not prev_missing:
+    #         logging.debug("No previous result file found, nothing to carry forward")
+    #         return []
 
-        still_missing = [ref for ref in prev_missing if ref not in sftp_set]
+    #     still_missing = [ref for ref in prev_missing if ref not in sftp_set]
 
-        return still_missing
+    #     # return still_missing
+    #     return prev_missing
 
 
     def display_result_in_terminal(self):
@@ -221,28 +223,32 @@ class FileComparator:
         5. Display missing files in the terminal and export both lists.
         """
 
+        # New data updated in csv
         csv_data = self.read_latest_txt(self.csv_dir, False)
-        sftp_data = self.filter_parent_path(self.sftp_dir)
+        # Last missing data, check again
+        last_missing_sftp = self.read_last_record(self.result_dir, "result")
+        # Use dictionary to remove duplicates (key is unique), then convert to list
+        csv_combined = list(dict.fromkeys(list(csv_data) + list(last_missing_sftp)))
+        # Separate set ONLY for O(1) lookup — doesn't need order
+        csv_set = set(csv_combined)
 
-        # Convert to sets for efficient O(1) lookups
-        csv_set = set(csv_data)
+        # New data uploaded in SFTP
+        sftp_data = self.read_latest_txt(self.sftp_dir, True)
 
-        # Files uploaded in SFTP
+        # Data that uploaded in SFTP but not recorded in csv
         pre_upload = self.read_last_record(self.surplus_dir, "surplus")
-        # '|' is union operator for sets
-        sftp_set = set(sftp_data) | set(pre_upload)
+        sftp_combined = list(dict.fromkeys(list(pre_upload) + list(sftp_data)))
+        sftp_set = set(sftp_combined)
 
         # Files haven't been upload to SFTP
-        should_upload = [f for f in csv_data if f not in sftp_set]
-        # Files that are still missing from the previous
-        missing_from_last = self.carry_forward_missing(sftp_set)
-        # Use dictionary to remove duplicates (key is unique), then convert to list
-        self.result_list = list(dict.fromkeys(should_upload + missing_from_last))
+        # Use FULL SFTP snapshot to check, so carried-forward items that
+        # have since been uploaded (or are no longer relevant) are dropped
+        file_missing = [f for f in csv_combined if f not in sftp_set]
+        self.result_list = list(dict.fromkeys(file_missing))
 
-        # File in SFTP but not yet in csv
-        will_update = [f for f in sftp_data if f not in csv_set]
-        still_no_update = [f for f in pre_upload if f not in csv_set]
-        self.insequence_list = list(dict.fromkeys(will_update + still_no_update))
+        # Files hasnt recorded in csv
+        wait_update = [f for f in sftp_combined if f not in csv_set]
+        self.insequence_list = list(dict.fromkeys(wait_update))
 
         logging.info(f"{len(self.result_list)} files haven't upload to SFTP")
         logging.info(f"{len(self.insequence_list)} file hasn't updated in csv")
