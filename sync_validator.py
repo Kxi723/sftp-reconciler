@@ -18,7 +18,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 from config import setup_logging, CURRENT_DATE_TIME, CSV_DIR, SFTP_DIR,\
-RESULT_DIR, SURPLUS_DIR, DATE_TIME
+RESULT_DIR, SURPLUS_DIR
 
 # Initialize shared logging
 setup_logging()
@@ -41,7 +41,7 @@ class FileComparator:
         self.latest_sftp_file = None  # Track latest SFTP file for post-processing rename
 
 
-    def filter_parent_path(self, list: list) -> list:
+    def filter_parent_path(self, file_path: list) -> list:
         """
         Remove parent path and timestamped suffix,
         return a list of filename itself only
@@ -50,7 +50,7 @@ class FileComparator:
         cleaned_data = []
 
         logging.debug("Cleaning data file path")
-        for ship_ref in list:
+        for ship_ref in file_path:
 
             # Remove directory path to get file name
             filename = Path(ship_ref).name
@@ -240,7 +240,7 @@ class FileComparator:
             for ship_ref in output_data:
                 file.write(f"{ship_ref}\n")
 
-        logging.info(f"{title} data have been uploaded and renamed as {CURRENT_DATE_TIME}.txt")
+        logging.info(f"{title} data have been exported and renamed as {CURRENT_DATE_TIME}.txt")
         print(f"{title} data saved at {CURRENT_DATE_TIME}.txt")
 
 
@@ -307,10 +307,10 @@ class FileComparator:
         self.insequence_list = list(dict.fromkeys(wait_update))
         logging.info(f"Total {len(self.insequence_list)} data hasn't updated in csv")
 
-        self.display_result_in_terminal()
-
         self.export_result(self.result_list, self.result_dir, "Results")
         self.export_result(self.insequence_list, self.surplus_dir, "Pre-uploads")
+
+        self.display_result_in_terminal()
 
         # Lock: rename SFTP file to prevent reprocessing same data
         self.mark_sftp_processed()
